@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 import {
   Search,
   ChevronDown,
@@ -8,14 +9,62 @@ import {
   ArrowUp,
   MessageSquare,
   Check,
+  User,
+  LogOut,
+  Settings,
 } from "lucide-react";
 
 export default function Indexlandingpage() {
+  const navigate = useNavigate();
+
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("Newest");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [UserID, setUserID] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
+  const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
+
+  const handleLogout = () => {
+    localStorage.removeItem("stackit.user");
+    localStorage.removeItem("stackit.accessToken");
+    setIsLoggedIn(false);
+    setUser(null);
+    setUserID("");
+    navigate("/auth/signin");
+  };
+
+  useEffect(() => {
+    const userData = window.localStorage.getItem("stackit.user");
+    const accessToken = window.localStorage.getItem("stackit.accessToken");
+    if (userData && accessToken) {
+      const userObj = JSON.parse(userData);
+      setUserID(userObj.id);
+      setUser(userObj);
+      setIsLoggedIn(true);
+    } else {
+      window.localStorage.setItem("stackit.user", "");
+      window.localStorage.setItem("stackit.accessToken", "");
+      setIsLoggedIn(false);
+      navigate("/auth/signin");
+    }
+  }, [navigate]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isAccountDropdownOpen && !event.target.closest(".account-dropdown")) {
+        setIsAccountDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isAccountDropdownOpen]);
 
   const questions = [
     {
@@ -84,14 +133,67 @@ export default function Indexlandingpage() {
           <h1 className="text-2xl font-bold">StackIt</h1>
         </div>
         <div className="flex items-center space-x-4">
-          <button
-            onClick={() => {
-              navigation.navigate("/auth/signin");
-            }}
-            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-full text-sm"
-          >
-            Login
-          </button>
+          {isLoggedIn ? (
+            <div className="relative account-dropdown">
+              <button
+                onClick={() => setIsAccountDropdownOpen(!isAccountDropdownOpen)}
+                className="flex items-center space-x-2 bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-full transition-colors"
+              >
+                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm text-gray-300">{user?.username}</span>
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              </button>
+
+              {isAccountDropdownOpen && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-gray-700 border border-gray-600 rounded-lg shadow-lg z-20">
+                  <div className="px-4 py-3 border-b border-gray-600">
+                    <p className="text-sm font-medium text-white">
+                      {user?.fullName}
+                    </p>
+                    <p className="text-xs text-gray-400">{user?.email}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsAccountDropdownOpen(false);
+                      // Navigate to profile
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-600"
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Profile
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsAccountDropdownOpen(false);
+                      // Navigate to settings
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-600"
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 border-t border-gray-600"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                navigate("/auth/signin");
+              }}
+              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-full text-sm"
+            >
+              Login
+            </button>
+          )}
         </div>
       </header>
 
@@ -107,14 +209,65 @@ export default function Indexlandingpage() {
             >
               <Menu className="w-5 h-5 text-gray-400" />
             </button>
-            <button
-              onClick={() => {
-                navigation.navigate("/auth/signin");
-              }}
-              className="bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-full text-sm"
-            >
-              Login
-            </button>
+            {isLoggedIn ? (
+              <div className="relative account-dropdown">
+                <button
+                  onClick={() =>
+                    setIsAccountDropdownOpen(!isAccountDropdownOpen)
+                  }
+                  className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center"
+                >
+                  <User className="w-4 h-4 text-white" />
+                </button>
+
+                {isAccountDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-gray-700 border border-gray-600 rounded-lg shadow-lg z-30">
+                    <div className="px-4 py-3 border-b border-gray-600">
+                      <p className="text-sm font-medium text-white">
+                        {user?.fullName}
+                      </p>
+                      <p className="text-xs text-gray-400">{user?.email}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsAccountDropdownOpen(false);
+                        // Navigate to profile
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-600"
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      Profile
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsAccountDropdownOpen(false);
+                        // Navigate to settings
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-600"
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Settings
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 border-t border-gray-600"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  navigate("/auth/signin");
+                }}
+                className="bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-full text-sm"
+              >
+                Login
+              </button>
+            )}
           </div>
         </div>
 
@@ -130,7 +283,7 @@ export default function Indexlandingpage() {
         </div>
 
         <button
-          onClick={() => navigation.navigate("/ask-new-question")}
+          onClick={() => navigate("/ask-new-question")}
           className="w-full bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm mb-3"
         >
           Ask New question
@@ -159,7 +312,7 @@ export default function Indexlandingpage() {
         <div className="hidden md:flex items-center justify-between mb-6">
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => navigation.navigate("/ask-new-question")}
+              onClick={() => navigate("/ask-new-question")}
               className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm"
             >
               Ask New question

@@ -1,7 +1,23 @@
 import React, { useState, useRef, useEffect } from "react";
-import { ChevronUp, ChevronDown, Bell, User, Navigation } from "lucide-react";
-
+import {
+  ChevronUp,
+  ChevronDown,
+  Bell,
+  User,
+  Navigation,
+  LogOut,
+  Settings,
+  ChevronDown as ChevronDownIcon,
+} from "lucide-react";
+import { useNavigate } from "react-router";
 export default function Viewquestionanswer() {
+  const navigate = useNavigate();
+
+  // User authentication state
+  const [user, setUser] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
+
   const [answers, setAnswers] = useState([
     {
       id: 1,
@@ -26,9 +42,44 @@ export default function Viewquestionanswer() {
   ]);
 
   const [newAnswer, setNewAnswer] = useState("");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const editorRef = useRef(null);
+
+  const handleLogout = () => {
+    localStorage.removeItem("stackit.user");
+    localStorage.removeItem("stackit.accessToken");
+    setUser(null);
+    setIsLoggedIn(false);
+    navigate("/auth/signin");
+  };
+
+  // Check authentication status
+  useEffect(() => {
+    const userData = window.localStorage.getItem("stackit.user");
+    const accessToken = window.localStorage.getItem("stackit.accessToken");
+    if (userData && accessToken) {
+      const userObj = JSON.parse(userData);
+      setUser(userObj);
+      setIsLoggedIn(true);
+    } else {
+      setIsLoggedIn(false);
+      setUser(null);
+    }
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isAccountDropdownOpen && !event.target.closest(".account-dropdown")) {
+        setIsAccountDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isAccountDropdownOpen]);
 
   // Initialize Quill editor for new answer
   useEffect(() => {
@@ -126,25 +177,31 @@ export default function Viewquestionanswer() {
       return;
     }
 
-    if (newAnswer.trim()) {
-      const newAnswerObj = {
-        id: answers.length + 1,
-        content: newAnswer,
-        votes: 0,
-        userVote: null,
-      };
+    if (!newAnswer.trim() || newAnswer === "<p><br></p>") {
+      alert("Please write an answer before submitting.");
+      return;
+    }
 
-      setAnswers([...answers, newAnswerObj]);
-      setNewAnswer("");
+    const newAnswerObj = {
+      id: answers.length + 1,
+      content: newAnswer,
+      votes: 0,
+      userVote: null,
+    };
 
-      // Clear Quill editor
-      if (editorRef.current && window.Quill) {
-        const quill = window.Quill.find(editorRef.current);
-        if (quill) {
-          quill.setContents([]);
-        }
+    setAnswers([...answers, newAnswerObj]);
+    setNewAnswer("");
+
+    // Clear Quill editor
+    if (editorRef.current && window.Quill) {
+      const quill = window.Quill.find(editorRef.current);
+      if (quill) {
+        quill.setContents([]);
       }
     }
+
+    // Show success message
+    alert("Answer submitted successfully!");
   };
 
   //   const handleLogin = () => {
@@ -162,15 +219,77 @@ export default function Viewquestionanswer() {
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
             <button
-              onClick={() => navigation.navigate("/")}
+              onClick={() => navigate("/")}
               className="text-gray-300 hover:text-white text-sm sm:text-base"
             >
               Home
             </button>
-            <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-gray-300" />
-            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-600 rounded flex items-center justify-center">
-              <User className="w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
+            {isLoggedIn && (
+              <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-gray-300 cursor-pointer hover:text-white" />
+            )}
+            {isLoggedIn ? (
+              <div className="relative account-dropdown">
+                <button
+                  onClick={() =>
+                    setIsAccountDropdownOpen(!isAccountDropdownOpen)
+                  }
+                  className="flex items-center space-x-2 bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-full transition-colors"
+                >
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                    <User className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                  </div>
+                  <span className="text-sm text-gray-300 hidden sm:block">
+                    {user?.fullName}
+                  </span>
+                  <ChevronDownIcon className="w-4 h-4 text-gray-400 hidden sm:block" />
+                </button>
+
+                {isAccountDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-gray-700 border border-gray-600 rounded-lg shadow-lg z-20">
+                    <div className="px-4 py-3 border-b border-gray-600">
+                      <p className="text-sm font-medium text-white">
+                        {user?.fullName}
+                      </p>
+                      <p className="text-xs text-gray-400">{user?.email}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsAccountDropdownOpen(false);
+                        // Navigate to profile
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-600"
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      Profile
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsAccountDropdownOpen(false);
+                        // Navigate to settings
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-600"
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Settings
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 border-t border-gray-600"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => navigate("/auth/signin")}
+                className="bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-full text-sm"
+              >
+                Login
+              </button>
+            )}
           </div>
         </div>
 
@@ -290,16 +409,21 @@ export default function Viewquestionanswer() {
             <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full">
               <h3 className="text-lg font-semibold mb-4">Login Required</h3>
               <p className="text-gray-300 mb-4">
-                {!isLoggedIn
-                  ? "If not login then not able to do vote ( show a quick login/signup popup) No multiple votes allowed"
-                  : "User can up-vote answer (once per user)"}
+                You need to be logged in to vote on answers or submit your own
+                answer.
               </p>
-              <div className="flex space-x-4">
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
                 <button
-                  onClick={() => navigation.navigate("/auth/signin")}
+                  onClick={() => navigate("/auth/signin")}
                   className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                 >
-                  Quick Login
+                  Login
+                </button>
+                <button
+                  onClick={() => navigate("/auth/signup")}
+                  className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
+                >
+                  Sign Up
                 </button>
                 <button
                   onClick={() => setShowLoginPopup(false)}

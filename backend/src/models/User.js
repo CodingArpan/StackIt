@@ -9,6 +9,16 @@ const userSchema = new mongoose.Schema({
         minlength: [2, 'Full name must be at least 2 characters long'],
         maxlength: [50, 'Full name cannot exceed 50 characters']
     },
+    username: {
+        type: String,
+        required: [true, 'Username is required'],
+        unique: true,
+        trim: true,
+        lowercase: true,
+        minlength: [3, 'Username must be at least 3 characters long'],
+        maxlength: [20, 'Username cannot exceed 20 characters'],
+        match: [/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores']
+    },
     email: {
         type: String,
         required: [true, 'Email is required'],
@@ -56,6 +66,8 @@ const userSchema = new mongoose.Schema({
 
 // Index for faster email lookups
 userSchema.index({ email: 1 });
+// Index for faster username lookups
+userSchema.index({ username: 1 });
 
 // Note: Password hashing is now handled in the controller
 // userSchema.pre('save', async function (next) {

@@ -5,14 +5,23 @@ import bcrypt from 'bcryptjs';
 // User signup controller
 export const signup = async (req, res) => {
     try {
-        const { fullName, email, password } = req.body;
+        const { fullName, username, email, password } = req.body;
 
-        // Check if user already exists
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
+        // Check if user already exists with email
+        const existingUserByEmail = await User.findOne({ email });
+        if (existingUserByEmail) {
             return res.status(400).json({
                 success: false,
                 message: 'User with this email already exists'
+            });
+        }
+
+        // Check if username already exists
+        const existingUserByUsername = await User.findOne({ username });
+        if (existingUserByUsername) {
+            return res.status(400).json({
+                success: false,
+                message: 'Username is already taken'
             });
         }
 
@@ -23,6 +32,7 @@ export const signup = async (req, res) => {
         // Create new user with hashed password
         const newUser = new User({
             fullName,
+            username,
             email,
             password: hashedPassword
         });
@@ -41,9 +51,8 @@ export const signup = async (req, res) => {
                 user: {
                     id: newUser._id,
                     fullName: newUser.fullName,
+                    username: newUser.username,
                     email: newUser.email,
-                    isEmailVerified: newUser.isEmailVerified,
-                    reputation: newUser.reputation,
                     joinedDate: newUser.joinedDate
                 },
                 accessToken
@@ -63,7 +72,6 @@ export const signup = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
-
         // Find user and include password for comparison
         const user = await User.findOne({ email }).select('+password');
         if (!user) {
@@ -97,10 +105,8 @@ export const login = async (req, res) => {
                 user: {
                     id: user._id,
                     fullName: user.fullName,
+                    username: user.username,
                     email: user.email,
-                    isEmailVerified: user.isEmailVerified,
-                    reputation: user.reputation,
-                    joinedDate: user.joinedDate,
                     lastLoginDate: user.lastLoginDate
                 },
                 accessToken
@@ -133,6 +139,7 @@ export const getCurrentUser = async (req, res) => {
                 user: {
                     id: user._id,
                     fullName: user.fullName,
+                    username: user.username,
                     email: user.email,
                     isEmailVerified: user.isEmailVerified,
                     profilePicture: user.profilePicture,
@@ -178,6 +185,7 @@ export const updateProfile = async (req, res) => {
                 user: {
                     id: user._id,
                     fullName: user.fullName,
+                    username: user.username,
                     email: user.email,
                     isEmailVerified: user.isEmailVerified,
                     profilePicture: user.profilePicture,
@@ -191,6 +199,57 @@ export const updateProfile = async (req, res) => {
 
     } catch (error) {
         console.error('Update profile error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+};
+
+// Check username availability
+export const checkUsernameAvailability = async (req, res) => {
+    try {
+        const { username } = req.body;
+
+        if (!username) {
+            return res.status(400).json({
+                success: false,
+                message: 'Username is required'
+            });
+        }
+
+        // Validate username format
+        if (username.length < 3 || username.length > 20) {
+            return res.status(400).json({
+                success: false,
+                message: 'Username must be between 3 and 20 characters'
+            });
+        }
+
+        const usernameRegex = /^[a-zA-Z0-9_]+$/;
+        if (!usernameRegex.test(username)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Username can only contain letters, numbers, and underscores'
+            });
+        }
+
+        // Check if username already exists
+        const existingUser = await User.findOne({ username: username.toLowerCase() });
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                message: 'Username is already taken'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Username is available'
+        });
+
+    } catch (error) {
+        console.error('Check username availability error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'

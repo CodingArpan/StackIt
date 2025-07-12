@@ -45,9 +45,25 @@ app.get('/', (req, res) => {
             health: '/api/health',
             signup: 'POST /api/auth/signup',
             login: 'POST /api/auth/login',
+            checkUsername: 'POST /api/auth/check-username',
             profile: 'GET /api/auth/me',
-            updateProfile: 'PUT /api/auth/profile'
+            updateProfile: 'PUT /api/auth/profile',
+            questions: 'GET /api/questions',
+            createQuestion: 'POST /api/questions',
+            getQuestion: 'GET /api/questions/:id',
+            updateQuestion: 'PUT /api/questions/:id',
+            deleteQuestion: 'DELETE /api/questions/:id',
+            voteQuestion: 'POST /api/questions/:id/vote',
+            userQuestions: 'GET /api/questions/user/:userId'
         }
+    });
+});
+
+// 404 handler for undefined routes
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        message: `Route ${req.originalUrl} not found`
     });
 });
 

@@ -1,10 +1,53 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router";
+import { User, LogOut, Settings, ChevronDown } from "lucide-react";
 
-export default function StackItForm() {
+export default function AsknewQuestion() {
+  const navigate = useNavigate();
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
+  const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
   const editorRef = useRef(null);
+
+  const handleLogout = () => {
+    localStorage.removeItem("stackit.user");
+    localStorage.removeItem("stackit.accessToken");
+    setIsLoggedIn(false);
+    setUser(null);
+    navigate("/auth/signin");
+  };
+
+  // Check authentication status
+  useEffect(() => {
+    const userData = window.localStorage.getItem("stackit.user");
+    const accessToken = window.localStorage.getItem("stackit.accessToken");
+    if (userData && accessToken) {
+      const userObj = JSON.parse(userData);
+      setUser(userObj);
+      setIsLoggedIn(true);
+    } else {
+      setIsLoggedIn(false);
+      navigate("/auth/signin");
+    }
+  }, [navigate]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isAccountDropdownOpen && !event.target.closest(".account-dropdown")) {
+        setIsAccountDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isAccountDropdownOpen]);
 
   // Initialize Quill editor
   useEffect(() => {
@@ -76,9 +119,62 @@ export default function StackItForm() {
     loadQuill();
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Form submitted:", { title, description, tags });
+
+    // Basic validation
+    if (!title.trim()) {
+      alert("Please enter a title for your question");
+      return;
+    }
+
+    if (!description.trim()) {
+      alert("Please provide a description for your question");
+      return;
+    }
+
+    // Get auth token
+    const accessToken = localStorage.getItem("stackit.accessToken");
+    if (!accessToken) {
+      alert("Please login to ask a question");
+      navigate("/auth/signin");
+      return;
+    }
+
+    try {
+      const questionData = {
+        title: title.trim(),
+        description: description,
+        tags: tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter((tag) => tag.length > 0),
+      };
+
+      console.log("Submitting question:", questionData);
+
+      // Make API call to create question
+      const response = await fetch("http://localhost:3000/api/questions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(questionData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to submit question");
+      }
+
+      alert("Question submitted successfully!");
+      navigate("/");
+    } catch (error) {
+      console.error("Error submitting question:", error);
+      alert("Failed to submit question. Please try again.");
+    }
   };
 
   return (
@@ -88,16 +184,77 @@ export default function StackItForm() {
         <div className="flex items-center justify-between mb-4 sm:mb-8">
           <div className="flex items-center space-x-2 sm:space-x-4">
             <h1 className="text-lg sm:text-2xl font-bold">StackIt</h1>
-            <span className="text-gray-400 text-sm sm:text-base hidden sm:inline">
-              Screen 2
-            </span>
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
-            <button className="text-gray-300 hover:text-white text-sm sm:text-base">
+            <button
+              onClick={() => navigate("/")}
+              className="text-gray-300 hover:text-white text-sm sm:text-base"
+            >
               Home
             </button>
-            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-600 rounded"></div>
-            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-600 rounded"></div>
+            {isLoggedIn ? (
+              <div className="relative account-dropdown">
+                <button
+                  onClick={() =>
+                    setIsAccountDropdownOpen(!isAccountDropdownOpen)
+                  }
+                  className="flex items-center space-x-2 bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-full transition-colors"
+                >
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                    <User className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                  </div>
+                  <span className="text-sm text-gray-300 hidden sm:block">
+                    {user?.username}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-gray-400 hidden sm:block" />
+                </button>
+
+                {isAccountDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-gray-700 border border-gray-600 rounded-lg shadow-lg z-20">
+                    <div className="px-4 py-3 border-b border-gray-600">
+                      <p className="text-sm font-medium text-white">
+                        {user?.username}
+                      </p>
+                      <p className="text-xs text-gray-400">{user?.email}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsAccountDropdownOpen(false);
+                        // Navigate to profile
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-600"
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      Profile
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsAccountDropdownOpen(false);
+                        // Navigate to settings
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-600"
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Settings
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 border-t border-gray-600"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => navigate("/auth/signin")}
+                className="bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-full text-sm"
+              >
+                Login
+              </button>
+            )}
           </div>
         </div>
 
