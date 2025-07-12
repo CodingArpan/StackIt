@@ -129,7 +129,10 @@ export default function Indexlandingpage() {
           <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
         </div>
 
-        <button className="w-full bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm mb-3">
+        <button
+          onClick={() => navigation.navigate("/ask-new-question")}
+          className="w-full bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm mb-3"
+        >
           Ask New question
         </button>
 
@@ -155,7 +158,10 @@ export default function Indexlandingpage() {
       <main className="px-4 md:px-6 py-4 md:py-6">
         <div className="hidden md:flex items-center justify-between mb-6">
           <div className="flex items-center space-x-4">
-            <button className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm">
+            <button
+              onClick={() => navigation.navigate("/ask-new-question")}
+              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm"
+            >
               Ask New question
             </button>
 

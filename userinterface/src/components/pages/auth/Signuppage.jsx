@@ -16,7 +16,6 @@ const Signuppage = () => {
   const [signupData, setSignupData] = useState({
     fullName: "",
     email: "",
-    phone: "",
     password: "",
     confirmPassword: "",
   });
@@ -101,22 +100,7 @@ const Signuppage = () => {
               />
             </div>
 
-            {/* Phone */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Phone className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="tel"
-                name="phone"
-                value={signupData.phone}
-                onChange={handleSignupChange}
-                placeholder="Phone Number"
-                className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-300"
-                required
-              />
-            </div>
-
+           
             {/* Password */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
