@@ -26,6 +26,16 @@ export default function Indexlandingpage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalQuestions: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
 
   const handleLogout = () => {
     localStorage.removeItem("stackit.user");
@@ -66,64 +76,186 @@ export default function Indexlandingpage() {
     };
   }, [isAccountDropdownOpen]);
 
-  const questions = [
-    {
-      id: 1,
-      title:
-        "How to join 2 columns in a data set to make a separate column in SQL",
-      description:
-        "I do not know the code for it as I am a beginner. As an example what I need to do is like there is a column 1 containing First name, and column 2 consists of last name I want a column to combine...",
-      user: "User Name",
-      tags: ["Tags", "Tags"],
-      timeAgo: "5 ans",
-      answers: 0,
-      votes: 0,
-    },
-    {
-      id: 2,
-      title: "Question.....",
-      description: "Descriptions....",
-      user: "User Name",
-      tags: ["Tags", "Tags"],
-      timeAgo: "3 ans",
-      answers: 0,
-      votes: 0,
-    },
-    {
-      id: 3,
-      title: "Question.....",
-      description: "Descriptions....",
-      user: "User Name",
-      tags: ["Tags", "Tags"],
-      timeAgo: "2 ans",
-      answers: 0,
-      votes: 0,
-    },
-  ];
+  // Function to fetch questions from the API
+  const fetchQuestions = async (page = 1, sort = "Newest", search = "") => {
+    try {
+      setLoading(true);
+      setError("");
 
-  const sortOptions = ["Newest", "Unanswered", "Active", "Votes"];
-  const filterOptions = ["Filters", "Newest", "Unanswered", "More"];
+      // Map frontend sort options to backend format
+      const sortMapping = {
+        Newest: "recent",
+        Popular: "popular",
+        Views: "views",
+        Votes: "votes",
+      };
 
-  const totalPages = 7;
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: "10",
+        sort: sortMapping[sort] || "recent",
+      });
+
+      if (search.trim()) {
+        params.append("search", search.trim());
+      }
+
+      const response = await fetch(
+        `http://localhost:3000/api/questions?${params}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setQuestions(data.data.questions || []);
+        setPagination(
+          data.data.pagination || {
+            currentPage: 1,
+            totalPages: 1,
+            totalQuestions: 0,
+            hasNextPage: false,
+            hasPrevPage: false,
+          }
+        );
+      } else {
+        setError(data.message || "Failed to fetch questions");
+        setQuestions([]);
+      }
+    } catch (error) {
+      console.error("Fetch questions error:", error);
+      setError("Network error. Please check your connection and try again.");
+      setQuestions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Effect to fetch questions on component mount and when filters change
+  useEffect(() => {
+    fetchQuestions(currentPage, sortBy, searchTerm);
+  }, [currentPage, sortBy, searchTerm]);
+
+  // Function to format time ago
+  const formatTimeAgo = (dateString) => {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffInMs = now - date;
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+    if (diffInMinutes < 1) return "just now";
+    if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
+    if (diffInHours < 24)
+      return `${diffInHours} hour${diffInHours > 1 ? "s" : ""} ago`;
+    if (diffInDays < 30)
+      return `${diffInDays} day${diffInDays > 1 ? "s" : ""} ago`;
+    return date.toLocaleDateString();
+  };
+
+  const sortOptions = ["Newest", "Popular", "Views", "Votes"];
+  const filterOptions = ["Filters", "Newest", "Popular", "Views", "Votes"];
 
   const renderPageNumbers = () => {
     const pages = [];
-    for (let i = 1; i <= totalPages; i++) {
+    const totalPages = pagination.totalPages;
+
+    // Show first page
+    if (totalPages > 0) {
       pages.push(
         <button
-          key={i}
-          onClick={() => setCurrentPage(i)}
+          key={1}
+          onClick={() => setCurrentPage(1)}
           className={`px-3 py-1 mx-1 rounded ${
-            currentPage === i
+            currentPage === 1
               ? "bg-blue-600 text-white"
               : "text-gray-300 hover:bg-gray-700"
           }`}
         >
-          {i}
+          1
         </button>
       );
     }
+
+    // Show dots if needed
+    if (currentPage > 3) {
+      pages.push(
+        <span key="dots-start" className="px-2 text-gray-400">
+          ...
+        </span>
+      );
+    }
+
+    // Show pages around current page
+    const startPage = Math.max(2, currentPage - 1);
+    const endPage = Math.min(totalPages - 1, currentPage + 1);
+
+    for (let i = startPage; i <= endPage; i++) {
+      if (i !== 1 && i !== totalPages) {
+        pages.push(
+          <button
+            key={i}
+            onClick={() => setCurrentPage(i)}
+            className={`px-3 py-1 mx-1 rounded ${
+              currentPage === i
+                ? "bg-blue-600 text-white"
+                : "text-gray-300 hover:bg-gray-700"
+            }`}
+          >
+            {i}
+          </button>
+        );
+      }
+    }
+
+    // Show dots if needed
+    if (currentPage < totalPages - 2) {
+      pages.push(
+        <span key="dots-end" className="px-2 text-gray-400">
+          ...
+        </span>
+      );
+    }
+
+    // Show last page
+    if (totalPages > 1) {
+      pages.push(
+        <button
+          key={totalPages}
+          onClick={() => setCurrentPage(totalPages)}
+          className={`px-3 py-1 mx-1 rounded ${
+            currentPage === totalPages
+              ? "bg-blue-600 text-white"
+              : "text-gray-300 hover:bg-gray-700"
+          }`}
+        >
+          {totalPages}
+        </button>
+      );
+    }
+
     return pages;
+  };
+
+  // Handle search with debouncing
+  useEffect(() => {
+    const delayedSearch = setTimeout(() => {
+      setCurrentPage(1); // Always reset to first page when searching
+    }, 500);
+
+    return () => clearTimeout(delayedSearch);
+  }, [searchTerm]); // Only depend on searchTerm to avoid infinite loops
+
+  // Handle sort change
+  const handleSortChange = (newSort) => {
+    setSortBy(newSort);
+    setCurrentPage(1); // Reset to first page when changing sort
   };
 
   return (
@@ -295,7 +427,7 @@ export default function Indexlandingpage() {
               <button
                 key={option}
                 onClick={() => {
-                  setSortBy(option);
+                  handleSortChange(option);
                   setIsFiltersOpen(false);
                 }}
                 className="flex items-center justify-between w-full px-4 py-3 text-left text-sm hover:bg-gray-700 border-b border-gray-600 last:border-b-0"
@@ -334,7 +466,7 @@ export default function Indexlandingpage() {
                     <button
                       key={option}
                       onClick={() => {
-                        setSortBy(option);
+                        handleSortChange(option);
                         setIsDropdownOpen(false);
                       }}
                       className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-600"
@@ -361,106 +493,167 @@ export default function Indexlandingpage() {
           </div>
         </div>
 
-        <div className="space-y-4">
-          {questions.map((question) => (
-            <div
-              key={question.id}
-              className="border border-gray-700 rounded-lg p-3 md:p-4 hover:border-gray-600 transition-colors"
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+            <span className="ml-2 text-gray-400">Loading questions...</span>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-red-400 text-center">
+            {error}
+            <button
+              onClick={() => fetchQuestions(currentPage, sortBy, searchTerm)}
+              className="ml-2 text-blue-400 hover:text-blue-300 underline"
             >
-              <div className="md:hidden">
-                <div className="flex items-start space-x-3 mb-3">
-                  <div className="flex flex-col items-center space-y-1 text-xs text-gray-400 mt-1">
-                    <ArrowUp className="w-4 h-4" />
-                    <span>{question.votes}</span>
-                    <Check className="w-4 h-4" />
+              Try again
+            </button>
+          </div>
+        )}
+
+        {/* No Questions State */}
+        {!loading && !error && questions.length === 0 && (
+          <div className="text-center py-8">
+            <div className="text-gray-400 mb-4">
+              <MessageSquare className="w-16 h-16 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-2">No questions found</h3>
+              <p className="text-sm">
+                {searchTerm
+                  ? `No questions match "${searchTerm}". Try a different search term.`
+                  : "Be the first to ask a question!"}
+              </p>
+            </div>
+            <button
+              onClick={() => navigate("/ask-new-question")}
+              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm"
+            >
+              Ask New Question
+            </button>
+          </div>
+        )}
+
+        {/* Questions List */}
+        {!loading && !error && questions.length > 0 && (
+          <div className="space-y-4">
+            {questions.map((question) => (
+              <div
+                key={question._id}
+                className="border border-gray-700 rounded-lg p-3 md:p-4 hover:border-gray-600 transition-colors cursor-pointer"
+                onClick={() => navigate(`/view-question/${question._id}`)}
+              >
+                <div className="md:hidden">
+                  <div className="flex items-start space-x-3 mb-3">
+                    <div className="flex flex-col items-center space-y-1 text-xs text-gray-400 mt-1">
+                      <ArrowUp className="w-4 h-4" />
+                      <span>{question.votes || 0}</span>
+                      {question.isResolved && (
+                        <Check className="w-4 h-4 text-green-400" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-blue-400 hover:text-blue-300 mb-2">
+                        {question.title}
+                      </h3>
+                      <p className="text-gray-300 text-xs mb-3 line-clamp-3">
+                        {question.description}
+                      </p>
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {question.tags &&
+                          question.tags.map((tag, index) => (
+                            <span
+                              key={index}
+                              className="bg-gray-700 text-gray-300 px-2 py-1 rounded text-xs"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-gray-400">
+                        <span>
+                          {question.authorUsername || question.author?.username}
+                        </span>
+                        <span>{formatTimeAgo(question.createdAt)}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-sm font-medium text-blue-400 hover:text-blue-300 cursor-pointer mb-2">
+                </div>
+
+                <div className="hidden md:block">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="text-lg font-medium text-blue-400 hover:text-blue-300">
                       {question.title}
                     </h3>
-                    <p className="text-gray-300 text-xs mb-3 line-clamp-3">
-                      {question.description}
-                    </p>
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {question.tags.map((tag, index) => (
-                        <span
-                          key={index}
-                          className="bg-gray-700 text-gray-300 px-2 py-1 rounded text-xs"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-gray-400">
-                      <span>{question.user}</span>
-                      <span>{question.timeAgo}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="hidden md:block">
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="text-lg font-medium text-blue-400 hover:text-blue-300 cursor-pointer">
-                    {question.title}
-                  </h3>
-                  <span className="text-gray-400 text-sm bg-gray-800 px-2 py-1 rounded">
-                    {question.timeAgo}
-                  </span>
-                </div>
-
-                <p className="text-gray-300 text-sm mb-3 line-clamp-2">
-                  {question.description}
-                </p>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex space-x-2">
-                      {question.tags.map((tag, index) => (
-                        <span
-                          key={index}
-                          className="bg-gray-700 text-gray-300 px-2 py-1 rounded text-xs"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                    <span className="text-gray-400 text-sm">
-                      {question.user}
+                    <span className="text-gray-400 text-sm bg-gray-800 px-2 py-1 rounded">
+                      {formatTimeAgo(question.createdAt)}
                     </span>
                   </div>
 
-                  <div className="flex items-center space-x-4 text-sm text-gray-400">
-                    <span>{question.votes} votes</span>
-                    <span>{question.answers} answers</span>
+                  <p className="text-gray-300 text-sm mb-3 line-clamp-2">
+                    {question.description}
+                  </p>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex space-x-2">
+                        {question.tags &&
+                          question.tags.map((tag, index) => (
+                            <span
+                              key={index}
+                              className="bg-gray-700 text-gray-300 px-2 py-1 rounded text-xs"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                      </div>
+                      <span className="text-gray-400 text-sm">
+                        {question.authorUsername || question.author?.username}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center space-x-4 text-sm text-gray-400">
+                      <span>{question.votes || 0} votes</span>
+                      <span>{question.answersCount || 0} answers</span>
+                      <span>{question.views || 0} views</span>
+                    </div>
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!loading &&
+          !error &&
+          questions.length > 0 &&
+          pagination.totalPages > 1 && (
+            <div className="flex items-center justify-center mt-6 md:mt-8 space-x-1 md:space-x-2">
+              <button
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              {renderPageNumbers()}
+
+              <button
+                onClick={() =>
+                  setCurrentPage(
+                    Math.min(pagination.totalPages, currentPage + 1)
+                  )
+                }
+                disabled={currentPage === pagination.totalPages}
+                className="p-2 rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
-          ))}
-        </div>
-
-        <div className="flex items-center justify-center mt-6 md:mt-8 space-x-1 md:space-x-2">
-          <button
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            className="p-2 rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-
-          {renderPageNumbers()}
-
-          <button
-            onClick={() =>
-              setCurrentPage(Math.min(totalPages, currentPage + 1))
-            }
-            disabled={currentPage === totalPages}
-            className="p-2 rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
+          )}
       </main>
 
       <div className="fixed bottom-4 left-4 text-gray-500 text-xs md:hidden">
