@@ -1,6 +1,4 @@
 import React, { useState, useRef, useEffect } from "react";
-import Quill from "quill";
-import "quill/dist/quill.snow.css";
 
 export default function StackItForm() {
   const [title, setTitle] = useState("");
@@ -10,53 +8,72 @@ export default function StackItForm() {
 
   // Initialize Quill editor
   useEffect(() => {
-    if (editorRef.current) {
-      const quill = new Quill(editorRef.current, {
-        theme: "snow",
-        modules: {
-          toolbar: [
-            ["bold", "italic", "underline", "strike"],
-            ["blockquote", "code-block"],
-            [{ header: 1 }, { header: 2 }],
-            [{ list: "ordered" }, { list: "bullet" }],
-            [{ script: "sub" }, { script: "super" }],
-            [{ indent: "-1" }, { indent: "+1" }],
-            [{ direction: "rtl" }],
-            [{ size: ["small", false, "large", "huge"] }],
-            [{ header: [1, 2, 3, 4, 5, 6, false] }],
-            [{ color: [] }, { background: [] }],
-            [{ font: [] }],
-            [{ align: [] }],
-            ["clean"],
-            ["link", "image", "video"],
-          ],
-        },
-        placeholder: "Describe your question in detail...",
-      });
+    // Load Quill CSS and JS
+    const loadQuill = async () => {
+      // Add Quill CSS
+      if (!document.querySelector('link[href*="quill"]')) {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href =
+          "https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css";
+        document.head.appendChild(link);
+      }
 
-      // Update state when content changes
-      quill.on("text-change", () => {
-        setDescription(quill.root.innerHTML);
-      });
+      // Load Quill JS
+      if (!window.Quill) {
+        const script = document.createElement("script");
+        script.src =
+          "https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js";
+        script.onload = initializeQuill;
+        document.head.appendChild(script);
+      } else {
+        initializeQuill();
+      }
+    };
 
-      // Apply dark theme styles
-      const editor = editorRef.current;
-      if (editor) {
-        const qlEditor = editor.querySelector(".ql-editor");
-        const qlToolbar = editor.querySelector(".ql-toolbar");
+    const initializeQuill = () => {
+      if (editorRef.current && window.Quill) {
+        const quill = new window.Quill(editorRef.current, {
+          theme: "snow",
+          modules: {
+            toolbar: [
+              ["bold", "italic", "underline", "strike"],
+              ["blockquote", "code-block"],
+              [{ header: 1 }, { header: 2 }],
+              [{ list: "ordered" }, { list: "bullet" }],
+              [{ script: "sub" }, { script: "super" }],
+              [{ indent: "-1" }, { indent: "+1" }],
+              [{ direction: "rtl" }],
+              [{ size: ["small", false, "large", "huge"] }],
+              [{ header: [1, 2, 3, 4, 5, 6, false] }],
+              [{ color: [] }, { background: [] }],
+              [{ font: [] }],
+              [{ align: [] }],
+              ["clean"],
+              ["link", "image", "video"],
+            ],
+          },
+          placeholder: "Describe your question in detail...",
+        });
 
-        if (qlEditor) {
-          qlEditor.style.backgroundColor = "#1f2937";
-          qlEditor.style.color = "#ffffff";
-          qlEditor.style.border = "none";
-        }
+        // Update state when content changes
+        quill.on("text-change", () => {
+          setDescription(quill.root.innerHTML);
+        });
 
-        if (qlToolbar) {
-          qlToolbar.style.backgroundColor = "#374151";
-          qlToolbar.style.borderColor = "#4b5563";
+        // Apply dark theme styles
+        const editor = editorRef.current;
+        if (editor) {
+          editor.querySelector(".ql-editor").style.backgroundColor = "#1f2937";
+          editor.querySelector(".ql-editor").style.color = "#ffffff";
+          editor.querySelector(".ql-editor").style.border = "none";
+          editor.querySelector(".ql-toolbar").style.backgroundColor = "#374151";
+          editor.querySelector(".ql-toolbar").style.borderColor = "#4b5563";
         }
       }
-    }
+    };
+
+    loadQuill();
   }, []);
 
   const handleSubmit = (e) => {
@@ -71,12 +88,12 @@ export default function StackItForm() {
         <div className="flex items-center justify-between mb-4 sm:mb-8">
           <div className="flex items-center space-x-2 sm:space-x-4">
             <h1 className="text-lg sm:text-2xl font-bold">StackIt</h1>
+            <span className="text-gray-400 text-sm sm:text-base hidden sm:inline">
+              Screen 2
+            </span>
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
-            <button
-              onClick={() => navigation.navigate("/")}
-              className="text-gray-300 hover:text-white text-sm sm:text-base"
-            >
+            <button className="text-gray-300 hover:text-white text-sm sm:text-base">
               Home
             </button>
             <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-600 rounded"></div>
