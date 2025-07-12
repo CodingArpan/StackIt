@@ -478,9 +478,10 @@ export default function Viewquestionanswer() {
               </div>
             )}
 
-            <div className="text-gray-300 text-sm sm:text-base mb-4">
-              <p>{question.description}</p>
-            </div>
+            <div
+              className="prose prose-invert max-w-none text-gray-300 text-sm sm:text-base mb-4"
+              dangerouslySetInnerHTML={{ __html: question.description }}
+            />
 
             <div className="flex items-center justify-between text-sm text-gray-400 border-t border-gray-700 pt-4">
               <div className="flex items-center space-x-4">
@@ -741,6 +742,110 @@ export default function Viewquestionanswer() {
 
         .prose code {
           background-color: #111827 !important;
+          color: #d1d5db !important;
+        }
+
+        /* Quill content styling for answers and questions */
+        .ql-align-center {
+          text-align: center !important;
+        }
+
+        .ql-align-left {
+          text-align: left !important;
+        }
+
+        .ql-align-right {
+          text-align: right !important;
+        }
+
+        .ql-align-justify {
+          text-align: justify !important;
+        }
+
+        .ql-font-serif {
+          font-family: Georgia, Times, serif !important;
+        }
+
+        .ql-font-monospace {
+          font-family: Monaco, Courier, monospace !important;
+        }
+
+        .ql-size-small {
+          font-size: 0.75em !important;
+        }
+
+        .ql-size-large {
+          font-size: 1.5em !important;
+        }
+
+        .ql-size-huge {
+          font-size: 2.5em !important;
+        }
+
+        .ql-indent-1 {
+          padding-left: 3em !important;
+        }
+
+        .ql-indent-2 {
+          padding-left: 6em !important;
+        }
+
+        .ql-indent-3 {
+          padding-left: 9em !important;
+        }
+
+        .ql-cursor {
+          display: none !important;
+        }
+
+        /* Additional Quill formatting */
+        strong {
+          font-weight: bold !important;
+          color: #ffffff !important;
+        }
+
+        em {
+          font-style: italic !important;
+        }
+
+        u {
+          text-decoration: underline !important;
+        }
+
+        s {
+          text-decoration: line-through !important;
+        }
+
+        sub {
+          vertical-align: sub !important;
+          font-size: smaller !important;
+        }
+
+        sup {
+          vertical-align: super !important;
+          font-size: smaller !important;
+        }
+
+        blockquote {
+          border-left: 4px solid #6b7280 !important;
+          padding-left: 1rem !important;
+          margin: 1rem 0 !important;
+          font-style: italic !important;
+          color: #d1d5db !important;
+        }
+
+        ol {
+          padding-left: 1.5rem !important;
+          margin: 1rem 0 !important;
+        }
+
+        ul {
+          padding-left: 1.5rem !important;
+          margin: 1rem 0 !important;
+        }
+
+        li {
+          margin: 0.5rem 0 !important;
           color: #d1d5db !important;
         }
       `}</style>
